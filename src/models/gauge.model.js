@@ -12,13 +12,13 @@ const gaugeSchema = new mongoose.Schema(
       type: String,
       required: [true, 'Gauge type is required'],
       enum: [
-        'Pressure',
-        'Temperature',
-        'Flow',
-        'Vacuum',
-        'Electrical',
-        'Mechanical',
-        'Other',
+        'pressure',
+        'temperature',
+        'flow',
+        'vacuum',
+        'electrical',
+        'mechanical',
+        'other',
       ],
     },
 
@@ -42,7 +42,7 @@ const gaugeSchema = new mongoose.Schema(
 
     traceability: {
       type: String,
-      enum: ['NIST', 'ISO', 'NABL', 'None'],
+      enum: ['NIST', 'ISO', 'NABL', 'None', 'UKAS', 'NABL'],
       default: 'NIST',
     },
 
@@ -54,7 +54,7 @@ const gaugeSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['Active', 'Inactive', 'Under Calibration', 'Retired'],
+      enum: ['active', 'inactive', 'under calibration', 'retired'],
       default: 'Active',
     },
 

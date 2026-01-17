@@ -26,6 +26,20 @@ const errorHandler = (err, req, res, next) => {
     return errorResponse(res, 400, 'Invalid ID format');
   }
 
+  // Multer errors
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return errorResponse(res, 400, `Unexpected file field: ${err.field}`);
+  }
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return errorResponse(res, 400, 'File too large');
+  }
+  if (err.code === 'LIMIT_FILE_COUNT') {
+    return errorResponse(res, 400, 'Too many files');
+  }
+  if (err.code === 'LIMIT_PART_COUNT') {
+    return errorResponse(res, 400, 'Too many parts');
+  }
+
   // Default error
   const statusCode = err.statusCode || 500;
   const message = err.message || 'Internal server error';

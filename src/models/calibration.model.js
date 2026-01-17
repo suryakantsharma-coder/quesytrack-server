@@ -7,7 +7,7 @@ const attachmentSchema = new mongoose.Schema(
     fileType: String,
     fileSize: Number,
   },
-  { _id: false }
+  { _id: false },
 );
 
 const calibrationSchema = new mongoose.Schema(
@@ -49,8 +49,8 @@ const calibrationSchema = new mongoose.Schema(
 
     calibrationType: {
       type: String,
-      enum: ['Internal', 'External'],
-      default: 'Internal',
+      enum: ['internal', 'external', 'third party'],
+      default: 'third party',
     },
 
     traceability: {
@@ -78,8 +78,8 @@ const calibrationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['Completed', 'Pending', 'Overdue'],
-      default: 'Completed',
+      enum: ['internal', 'external', 'third party', 'completed', 'pending', 'overdue'],
+      default: 'internal',
     },
 
     createdBy: {
@@ -89,7 +89,7 @@ const calibrationSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 module.exports = mongoose.model('Calibration', calibrationSchema);

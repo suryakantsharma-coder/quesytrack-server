@@ -21,6 +21,8 @@ const createCalibration = asyncHandler(async (req, res) => {
     reportLink,
   } = req.body;
 
+  console.log(req.body);  
+
   if (!calibrationId || !projectId || !calibrationDate || !calibrationDueDate) {
     return errorResponse(res, 400, 'Required calibration fields are missing');
   }

@@ -26,8 +26,8 @@ const reportSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['Completed', 'Pending', 'Overdue'],
-      default: 'Pending',
+      enum: ['completed', 'pending', 'overdue'],
+      default: 'completed',
     },
 
     reportLink: {

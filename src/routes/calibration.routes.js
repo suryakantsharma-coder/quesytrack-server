@@ -2,13 +2,13 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth.middleware');
 const calibrationController = require('../controllers/calibration.controller');
-const upload = require('../middlewares/upload.middleware'); // multer config
+const { optionalUpload } = require('../middlewares/upload.middleware'); // multer config
 
 router.use(authenticate);
 
 router.post(
   '/',
-  upload.array('files', 10), // up to 10 files, 100MB handled in multer
+  optionalUpload('files', 10), // up to 10 files, optional - allows JSON-only requests
   calibrationController.createCalibration
 );
 
@@ -17,7 +17,7 @@ router.get('/:id', calibrationController.getCalibrationById);
 
 router.put(
   '/:id',
-  upload.array('files', 10),
+  optionalUpload('files', 10), // up to 10 files, optional - allows JSON-only requests
   calibrationController.updateCalibration
 );
 

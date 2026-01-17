@@ -29,13 +29,27 @@ const projectSchema = new mongoose.Schema(
 
     progress: {
       type: String,
-      enum: ['Not Started', 'In Progress', 'Completed', 'On Hold'],
+      enum: [0, 25, 50, 75, 100],
       default: 'Not Started',
+    },
+
+    gauge: {
+      type: Number,
+      default: 0,
+      min: [0, 'Gauge value cannot be negative'],
+      max: [100, 'Gauge value cannot be greater than 100'],
+    },
+
+    calibration: {
+      type: Number,
+      default: 0,
+      min: [0, 'Calibration value cannot be negative'],
+      max: [100, 'Calibration value cannot be greater than 100'],
     },
 
     status: {
       type: String,
-      enum: ['Active', 'Inactive', 'Completed'],
+      enum: ['active', 'on-hold', 'completed'],
       required: [true, 'Status is required'],
       default: 'Active',
     },
@@ -54,7 +68,7 @@ const projectSchema = new mongoose.Schema(
   },
   {
     timestamps: true, // createdAt & updatedAt
-  }
+  },
 );
 
 module.exports = mongoose.model('Project', projectSchema);

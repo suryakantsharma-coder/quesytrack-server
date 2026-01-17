@@ -8,10 +8,10 @@ const upload = require('../middlewares/upload.middleware');
 
 router.use(authenticate);
 
-router.post('/', upload.array('images', 10), gaugeController.createGauge);
+router.post('/', upload.single('image'), gaugeController.createGauge);
 router.get('/', gaugeController.getGauges);
 router.get('/:id', gaugeController.getGaugeById);
-router.put('/:id', upload.array('images', 10), gaugeController.updateGauge);
+router.put('/:id', upload.single('image'), gaugeController.updateGauge);
 router.delete('/:id', gaugeController.deleteGauge);
 
 module.exports = router;
