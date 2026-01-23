@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 
 const gaugeSchema = new mongoose.Schema(
   {
+    gaugeId: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+      // Format: G-XXX (e.g., G-001, G-002)
+    },
+
     gaugeName: {
       type: String,
       required: [true, 'Gauge name is required'],
@@ -14,9 +22,9 @@ const gaugeSchema = new mongoose.Schema(
       enum: [
         'pressure',
         'temperature',
-        'flow',
+        'vernier',
         'vacuum',
-        'electrical',
+        'torque',
         'mechanical',
         'other',
       ],
@@ -54,7 +62,7 @@ const gaugeSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ['active', 'inactive', 'under calibration', 'retired'],
+      enum: ['active', 'inactive', 'under calibration', 'retired', 'maintenance'],
       default: 'Active',
     },
 

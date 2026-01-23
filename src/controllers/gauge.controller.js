@@ -1,6 +1,8 @@
 const Gauge = require('../models/gauge.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const { generateNextCustomId } = require('../utils/idGenerator');
+const { parsePaginationParams, paginateQuery, parseSearchParams } = require('../utils/pagination');
 
 /**
  * Gauge Controller
@@ -29,7 +31,11 @@ const createGauge = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, 'Gauge name and type are required');
   }
 
+  // Generate custom gaugeId (Format: G-001)
+  const gaugeId = await generateNextCustomId(Gauge, 'gaugeId', 'G');
+
   const gauge = await Gauge.create({
+    gaugeId,
     gaugeName,
     gaugeType,
     gaugeModel,
@@ -50,16 +56,38 @@ const createGauge = asyncHandler(async (req, res) => {
 
 /**
  * @route   GET /api/gauges
- * @desc    Get all gauges
+ * @desc    Get all gauges with pagination
  * @access  Private
+ * 
+ * Query params:
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 10, max: 100)
+ * - sortBy: Field to sort by (default: createdAt)
+ * - sortOrder: 'asc' or 'desc' (default: desc)
+ * - search: Search term for gaugeName, gaugeModel, manufacturer
+ * - status: Filter by status
+ * - gaugeType: Filter by gauge type
+ * - projectId: Filter by project
  */
 const getGauges = asyncHandler(async (req, res) => {
-  const gauges = await Gauge.find()
-    .populate('projectId', 'projectName')
-    .populate('createdBy', 'name email');
+  const paginationParams = parsePaginationParams(req.query);
+  const filter = parseSearchParams(req.query, ['gaugeName', 'gaugeModel', 'manufacturer', 'gaugeId']);
+
+  const populateOptions = [
+    { path: 'projectId', select: 'projectName projectId' },
+    { path: 'createdBy', select: 'name email' }
+  ];
+
+  const { data: gauges, pagination } = await paginateQuery(
+    Gauge,
+    filter,
+    paginationParams,
+    populateOptions
+  );
 
   return successResponse(res, 200, 'Gauges retrieved successfully', {
     gauges,
+    pagination,
   });
 });
 

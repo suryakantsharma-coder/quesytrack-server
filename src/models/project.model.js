@@ -1,14 +1,20 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
 
 /**
- * User Schema
- * Based on frontend requirements from Settings screen:
- * - name, email, designation, role (Admin, Viewer, Editor)
+ * Project Schema
+ * Includes custom projectId for human-readable identification
  */
 
 const projectSchema = new mongoose.Schema(
   {
+    projectId: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+      // Format: P-XXX (e.g., P-001, P-002)
+    },
+
     projectName: {
       type: String,
       required: [true, 'Project name is required'],

@@ -1,6 +1,8 @@
 const Project = require('../models/project.model');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 const asyncHandler = require('../utils/asyncHandler');
+const { generateNextCustomId } = require('../utils/idGenerator');
+const { parsePaginationParams, paginateQuery, parseSearchParams } = require('../utils/pagination');
 
 /**
  * Project Controller
@@ -40,7 +42,11 @@ const createProject = asyncHandler(async (req, res) => {
     return errorResponse(res, 400, 'Project name and start date are required');
   }
 
+  // Generate custom projectId (Format: P-001)
+  const projectId = await generateNextCustomId(Project, 'projectId', 'P');
+
   const project = await Project.create({
+    projectId,
     projectName,
     projectDescription: projectDescription || '',
     overdue: overdue || 0,
@@ -57,16 +63,35 @@ const createProject = asyncHandler(async (req, res) => {
 
 /**
  * @route   GET /api/projects
- * @desc    Get all projects
+ * @desc    Get all projects with pagination
  * @access  Private
+ * 
+ * Query params:
+ * - page: Page number (default: 1)
+ * - limit: Items per page (default: 10, max: 100)
+ * - sortBy: Field to sort by (default: createdAt)
+ * - sortOrder: 'asc' or 'desc' (default: desc)
+ * - search: Search term for projectName, projectDescription
+ * - status: Filter by status
  */
 const getProjects = asyncHandler(async (req, res) => {
-  const projects = await Project.find()
-    .sort({ createdAt: -1 })
-    .populate('createdBy', 'name email role');
+  const paginationParams = parsePaginationParams(req.query);
+  const filter = parseSearchParams(req.query, ['projectName', 'projectDescription', 'projectId']);
+
+  const populateOptions = [
+    { path: 'createdBy', select: 'name email role' }
+  ];
+
+  const { data: projects, pagination } = await paginateQuery(
+    Project,
+    filter,
+    paginationParams,
+    populateOptions
+  );
 
   return successResponse(res, 200, 'Projects retrieved successfully', {
     projects,
+    pagination,
   });
 });
 

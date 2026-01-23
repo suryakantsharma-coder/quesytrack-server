@@ -45,4 +45,24 @@ const authenticate = asyncHandler(async (req, res, next) => {
   }
 });
 
-module.exports = { authenticate };
+/**
+ * Admin Only Middleware
+ * Checks if the authenticated user has admin role
+ * Must be used after authenticate/protect middleware
+ */
+const adminOnly = (req, res, next) => {
+  if (!req.user) {
+    return errorResponse(res, 401, 'Authentication required');
+  }
+
+  if (req.user.role !== 'admin' && req.user.role !== 'Admin') {
+    return errorResponse(res, 403, 'Admin access required');
+  }
+
+  next();
+};
+
+// Alias for authenticate (commonly used name)
+const protect = authenticate;
+
+module.exports = { authenticate, protect, adminOnly };

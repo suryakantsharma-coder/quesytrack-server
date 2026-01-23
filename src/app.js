@@ -6,6 +6,7 @@ const projectRoutes = require('./routes/project.routes');
 const gaugeRoutes = require('./routes/gauge.routes');
 const calibrationRoutes = require('./routes/calibration.routes');
 const reportRoutes = require('./routes/report.routes');
+const adminRoutes = require('./routes/admin.routes');
 /**
  * Express App Configuration
  * Sets up middleware and routes
@@ -34,6 +35,8 @@ app.use('/api/gauges', gaugeRoutes);
 app.use('/api/calibrations', calibrationRoutes);
 // Report routes
 app.use('/api/reports', reportRoutes);
+// Admin routes (sequence management)
+app.use('/api/admin', adminRoutes);
 
 // 404 handler
 app.use((req, res) => {

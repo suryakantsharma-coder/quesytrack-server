@@ -14,9 +14,11 @@ const calibrationSchema = new mongoose.Schema(
   {
     calibrationId: {
       type: String,
-      required: [true, 'Calibration ID is required'],
       unique: true,
+      index: true,
       trim: true,
+      // Format: C-XXX (e.g., C-001, C-002)
+      // Auto-generated if not provided
     },
 
     projectId: {
@@ -26,9 +28,10 @@ const calibrationSchema = new mongoose.Schema(
     },
 
     gaugeId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Gauge',
+      type: String,
       required: false,
+      trim: true,
+      // Stores custom gaugeId (e.g., G-001) instead of MongoDB ObjectId
     },
 
     calibrationDate: {

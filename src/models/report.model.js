@@ -2,6 +2,14 @@ const mongoose = require('mongoose');
 
 const reportSchema = new mongoose.Schema(
   {
+    reportId: {
+      type: String,
+      unique: true,
+      index: true,
+      trim: true,
+      // Format: R-XXX (e.g., R-001, R-002)
+    },
+
     reportName: {
       type: String,
       required: [true, 'Report name is required'],
