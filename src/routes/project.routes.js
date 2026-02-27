@@ -1,8 +1,8 @@
-const express = require('express');
-const router = express.Router();
-const { authenticate } = require('../middlewares/auth.middleware');
-const projectController = require('../controllers/project.controller');
+import express from 'express';
+import { authenticate } from '../middlewares/auth.middleware.js';
+import projectController from '../controllers/project.controller.js';
 
+const router = express.Router();
 router.use(authenticate);
 
 router.post('/', projectController.createProject);
@@ -11,4 +11,4 @@ router.get('/:id', projectController.getProjectById);
 router.put('/:id', projectController.updateProject);
 router.delete('/:id', projectController.deleteProject);
 
-module.exports = router;
+export default router;

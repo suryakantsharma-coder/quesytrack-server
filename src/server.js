@@ -1,19 +1,11 @@
-require('dotenv').config();
-const app = require('./app');
-const connectDB = require('./config/db');
+import 'dotenv/config';
+import app from './app.js';
+import { connectDB } from './db/mongodb.js';
+import { env } from './config/env.js';
 
-/**
- * Server Entry Point
- * Connects to MongoDB and starts Express server
- */
-
-const PORT = process.env.PORT || 4000;
-
-// Connect to MongoDB
-connectDB();
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+connectDB().then(() => {
+  app.listen(env.PORT, () => {
+    console.log(`Server running on port ${env.PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  });
 });

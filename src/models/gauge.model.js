@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const gaugeSchema = new mongoose.Schema(
   {
@@ -88,4 +88,4 @@ const gaugeSchema = new mongoose.Schema(
   }
 );
 
-module.exports = mongoose.model('Gauge', gaugeSchema);
+export default mongoose.model('Gauge', gaugeSchema);

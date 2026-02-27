@@ -1,54 +1,53 @@
-const express = require('express');
-const cors = require('cors');
-const authRoutes = require('./routes/auth.routes');
-const errorHandler = require('./middlewares/error.middleware');
-const projectRoutes = require('./routes/project.routes');
-const gaugeRoutes = require('./routes/gauge.routes');
-const calibrationRoutes = require('./routes/calibration.routes');
-const reportRoutes = require('./routes/report.routes');
-const adminRoutes = require('./routes/admin.routes');
-/**
- * Express App Configuration
- * Sets up middleware and routes
- */
+import express from 'express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
+import authRoutes from './routes/auth.routes.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import errorHandler from './middlewares/error.middleware.js';
+import projectRoutes from './routes/project.routes.js';
+import gaugeRoutes from './routes/gauge.routes.js';
+import calibrationRoutes from './routes/calibration.routes.js';
+import reportRoutes from './routes/report.routes.js';
+import adminRoutes from './routes/admin.routes.js';
+import aiChatRoutes from './routes/aiChat.routes.js';
+import { env } from './config/env.js';
 
 const app = express();
 
-// Middleware
-app.use(cors()); // Enable CORS for frontend
-app.use(express.json()); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Health check route
+const apiLimiter = rateLimit({
+  windowMs: env.RATE_LIMIT_WINDOW_MS,
+  max: env.RATE_LIMIT_MAX,
+  message: { success: false, error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api', apiLimiter);
+
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
-// API Routes
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 app.use('/api/auth', authRoutes);
-
-// Project routes
 app.use('/api/projects', projectRoutes);
-// Gauge routes
 app.use('/api/gauges', gaugeRoutes);
-// Calibration routes
 app.use('/api/calibrations', calibrationRoutes);
-// Report routes
 app.use('/api/reports', reportRoutes);
-// Admin routes (sequence management)
 app.use('/api/admin', adminRoutes);
+app.use('/api', aiChatRoutes);
 
-// 404 handler
 app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: 'Route not found',
-  });
+  res.status(404).json({ success: false, error: 'Route not found' });
 });
 
-
-
-// Error handling middleware (must be last)
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

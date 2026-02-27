@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const attachmentSchema = new mongoose.Schema(
   {
@@ -95,4 +95,4 @@ const calibrationSchema = new mongoose.Schema(
   },
 );
 
-module.exports = mongoose.model('Calibration', calibrationSchema);
+export default mongoose.model('Calibration', calibrationSchema);
