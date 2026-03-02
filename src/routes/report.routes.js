@@ -7,6 +7,7 @@ router.use(authenticate);
 
 router.post('/', reportController.createReport);
 router.get('/', reportController.getReports);
+router.get('/search', reportController.searchReports);
 router.get('/:id', reportController.getReportById);
 router.put('/:id', reportController.updateReport);
 router.delete('/:id', reportController.deleteReport);

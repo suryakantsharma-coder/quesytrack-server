@@ -7,6 +7,9 @@ router.use(authenticate);
 
 router.post('/', projectController.createProject);
 router.get('/', projectController.getProjects);
+router.get('/search', projectController.searchProjects);
+router.get('/:id/gauges', projectController.getGaugesByProjectId);
+router.get('/:id/calibrations', projectController.getCalibrationsByProjectId);
 router.get('/:id', projectController.getProjectById);
 router.put('/:id', projectController.updateProject);
 router.delete('/:id', projectController.deleteProject);

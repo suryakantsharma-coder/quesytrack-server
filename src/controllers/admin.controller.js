@@ -1,10 +1,14 @@
+import mongoose from 'mongoose';
 import Project from '../models/project.model.js';
 import Report from '../models/report.model.js';
 import Gauge from '../models/gauge.model.js';
 import Calibration from '../models/calibration.model.js';
+import User from '../models/user.model.js';
+import Company from '../models/company.model.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { resetSequence, getSequenceInfo } from '../utils/idGenerator.js';
+import { parsePaginationParams, paginateQuery, buildSearchFilter } from '../utils/pagination.js';
 
 const modelMap = {
   project: { model: Project, idField: 'projectId', prefix: 'P' },
@@ -53,9 +57,58 @@ const resetAllSequences = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'All sequences reset successfully', results);
 });
 
+const getUsers = asyncHandler(async (req, res) => {
+  const paginationParams = parsePaginationParams(req.query);
+  const filter = buildSearchFilter(req.query, ['name', 'email', 'designation', 'role']);
+  const { data, pagination } = await paginateQuery(User, filter, paginationParams, []);
+  const users = data.map((u) => u.toObject());
+  users.forEach((u) => delete u.password);
+  return successResponse(res, 200, 'Users retrieved successfully', { users, pagination });
+});
+
+const searchUsers = asyncHandler(async (req, res) => {
+  const paginationParams = parsePaginationParams(req.query);
+  const filter = buildSearchFilter(req.query, ['name', 'email', 'designation', 'role']);
+  const { data, pagination } = await paginateQuery(User, filter, paginationParams, []);
+  const users = data.map((u) => u.toObject());
+  users.forEach((u) => delete u.password);
+  return successResponse(res, 200, 'Search successful', { data: users, pagination });
+});
+
+const updateUserCompany = asyncHandler(async (req, res) => {
+  const { id: userId } = req.params;
+  const { company: companyId } = req.body;
+
+  if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+    return errorResponse(res, 400, 'Invalid user ID');
+  }
+
+  const user = await User.findById(userId);
+  if (!user) return errorResponse(res, 404, 'User not found');
+
+  if (companyId !== undefined && companyId !== null) {
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
+      return errorResponse(res, 400, 'Invalid company ID');
+    }
+    const company = await Company.findById(companyId);
+    if (!company) return errorResponse(res, 404, 'Company not found');
+    user.company = company._id;
+  } else {
+    user.company = undefined;
+  }
+
+  await user.save();
+  const userObj = user.toObject();
+  delete userObj.password;
+  return successResponse(res, 200, 'User company updated successfully', { user: userObj });
+});
+
 export {
   resetModelSequence,
   getModelSequenceInfo,
   getAllSequenceInfo,
   resetAllSequences,
+  getUsers,
+  searchUsers,
+  updateUserCompany,
 };

@@ -14,6 +14,8 @@ const authenticate = asyncHandler(async (req, res, next) => {
     const user = await User.findById(decoded.userId).select('-password');
     if (!user) return errorResponse(res, 401, 'User not found');
     req.user = user;
+    if (decoded.company) req.user.company = decoded.company;
+    else if (user.company) req.user.company = user.company;
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') return errorResponse(res, 401, 'Invalid token');

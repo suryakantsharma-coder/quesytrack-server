@@ -2,6 +2,7 @@ import User from '../models/user.model.js';
 import { generateToken, verifyToken } from '../config/jwt.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
+import { auditLogFromRequest } from '../services/logger.service.js';
 
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, designation, role } = req.body;
@@ -19,12 +20,25 @@ const register = asyncHandler(async (req, res) => {
     designation: designation || '',
     role: role || 'Viewer',
   });
-  const token = generateToken({ userId: user._id.toString(), email: user.email });
+  const token = generateToken({
+    userId: user._id.toString(),
+    email: user.email,
+    company: user.company ? user.company.toString() : null,
+  });
+  auditLogFromRequest(req, {
+    actionType: 'USER_CREATED',
+    entityType: 'USER',
+    entityId: user._id.toString(),
+    entityName: user.name,
+    title: 'User Created',
+    description: `User ${user.name} (${user.email}) registered.`,
+  });
   return successResponse(res, 201, 'Registration successful', {
     user: {
       id: user._id,
       name: user.name,
       email: user.email,
+      company: user.company,
       designation: user.designation,
       role: user.role,
       createdAt: user.createdAt,
@@ -43,12 +57,17 @@ const login = asyncHandler(async (req, res) => {
   if (!user) return errorResponse(res, 401, 'Invalid email or password');
   const isPasswordValid = await user.comparePassword(password);
   if (!isPasswordValid) return errorResponse(res, 401, 'Invalid email or password');
-  const token = generateToken({ userId: user._id.toString(), email: user.email });
+  const token = generateToken({
+    userId: user._id.toString(),
+    email: user.email,
+    company: user.company ? user.company.toString() : null,
+  });
   return successResponse(res, 200, 'Login successful', {
     user: {
       id: user._id,
       name: user.name,
       email: user.email,
+      company: user.company,
       designation: user.designation,
       role: user.role,
       createdAt: user.createdAt,
@@ -65,6 +84,7 @@ const getMe = asyncHandler(async (req, res) => {
       id: user._id,
       name: user.name,
       email: user.email,
+      company: user.company,
       designation: user.designation,
       role: user.role,
       createdAt: user.createdAt,

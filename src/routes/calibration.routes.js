@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.post('/', optionalUpload('files', 10), calibrationController.createCalibration);
 router.get('/', calibrationController.getCalibrations);
+router.get('/search', calibrationController.searchCalibrations);
 router.get('/:id', calibrationController.getCalibrationById);
 router.put('/:id', optionalUpload('files', 10), calibrationController.updateCalibration);
 router.delete('/:id', calibrationController.deleteCalibration);

@@ -8,6 +8,7 @@ router.use(authenticate);
 
 router.post('/', upload.single('image'), gaugeController.createGauge);
 router.get('/', gaugeController.getGauges);
+router.get('/search', gaugeController.searchGauges);
 router.get('/:id', gaugeController.getGaugeById);
 router.put('/:id', upload.single('image'), gaugeController.updateGauge);
 router.delete('/:id', gaugeController.deleteGauge);

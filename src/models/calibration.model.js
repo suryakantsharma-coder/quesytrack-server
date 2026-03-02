@@ -89,10 +89,19 @@ const calibrationSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
   },
 );
+
+calibrationSchema.index({ calibrationDate: -1 });
+calibrationSchema.index({ status: 1 });
 
 export default mongoose.model('Calibration', calibrationSchema);

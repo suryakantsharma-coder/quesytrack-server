@@ -13,6 +13,8 @@ import calibrationRoutes from './routes/calibration.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import aiChatRoutes from './routes/aiChat.routes.js';
+import logsRoutes from './routes/logs.routes.js';
+import companyRoutes from './routes/company.routes.js';
 import { env } from './config/env.js';
 
 const app = express();
@@ -42,6 +44,8 @@ app.use('/api/gauges', gaugeRoutes);
 app.use('/api/calibrations', calibrationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/logs', logsRoutes);
+app.use('/api/companies', companyRoutes);
 app.use('/api', aiChatRoutes);
 
 app.use((req, res) => {

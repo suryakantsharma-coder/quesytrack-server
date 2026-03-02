@@ -71,10 +71,20 @@ const projectSchema = new mongoose.Schema(
       ref: 'User',
       required: false,
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: true, // createdAt & updatedAt
   },
 );
+
+projectSchema.index({ projectName: 1 });
+projectSchema.index({ status: 1 });
+projectSchema.index({ startedAt: -1 });
 
 export default mongoose.model('Project', projectSchema);

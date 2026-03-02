@@ -82,10 +82,20 @@ const gaugeSchema = new mongoose.Schema(
       ref: 'User',
       required: false,
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+gaugeSchema.index({ gaugeName: 1 });
+gaugeSchema.index({ status: 1 });
+gaugeSchema.index({ gaugeType: 1 });
 
 export default mongoose.model('Gauge', gaugeSchema);

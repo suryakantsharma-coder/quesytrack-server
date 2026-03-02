@@ -48,10 +48,20 @@ const reportSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
     },
+    company: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Company',
+      required: false,
+      index: true,
+    },
   },
   {
     timestamps: true,
   }
 );
+
+reportSchema.index({ reportName: 1 });
+reportSchema.index({ status: 1 });
+reportSchema.index({ calibrationDate: -1 });
 
 export default mongoose.model('Report', reportSchema);
