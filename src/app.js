@@ -15,6 +15,7 @@ import adminRoutes from './routes/admin.routes.js';
 import aiChatRoutes from './routes/aiChat.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import companyRoutes from './routes/company.routes.js';
+import userRoutes from './routes/user.routes.js';
 import { env } from './config/env.js';
 
 const app = express();
@@ -46,6 +47,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/companies', companyRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api', aiChatRoutes);
 
 app.use((req, res) => {

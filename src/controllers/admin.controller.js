@@ -77,7 +77,7 @@ const searchUsers = asyncHandler(async (req, res) => {
 
 const updateUserCompany = asyncHandler(async (req, res) => {
   const { id: userId } = req.params;
-  const { company: companyId } = req.body;
+  const { company: companyId, name, email, phoneNumber, designation } = req.body;
 
   if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
     return errorResponse(res, 400, 'Invalid user ID');
@@ -93,14 +93,29 @@ const updateUserCompany = asyncHandler(async (req, res) => {
     const company = await Company.findById(companyId);
     if (!company) return errorResponse(res, 404, 'Company not found');
     user.company = company._id;
-  } else {
+  } else if (companyId === null) {
     user.company = undefined;
+  }
+
+  if (name !== undefined) user.name = String(name).trim();
+  if (designation !== undefined) user.designation = String(designation).trim();
+  if (phoneNumber !== undefined) user.phoneNumber = String(phoneNumber).trim();
+  if (email !== undefined) {
+    const newEmail = String(email).trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(newEmail)) {
+      return errorResponse(res, 400, 'Please provide a valid email');
+    }
+    if (newEmail !== user.email) {
+      const existing = await User.findOne({ email: newEmail });
+      if (existing) return errorResponse(res, 400, 'User with this email already exists');
+      user.email = newEmail;
+    }
   }
 
   await user.save();
   const userObj = user.toObject();
   delete userObj.password;
-  return successResponse(res, 200, 'User company updated successfully', { user: userObj });
+  return successResponse(res, 200, 'User updated successfully', { user: userObj });
 });
 
 export {

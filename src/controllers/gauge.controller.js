@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import path from 'path';
+import fs from 'fs';
 import Gauge from '../models/gauge.model.js';
 import Project from '../models/project.model.js';
 import { successResponse, errorResponse } from '../utils/apiResponse.js';
@@ -153,6 +155,46 @@ const updateGauge = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Gauge updated successfully', { gauge });
 });
 
+/**
+ * PUT /api/gauges/:id/image
+ * Remove the gauge's existing image file (if any) and replace with the uploaded image.
+ * Body: multipart/form-data with field "image" (required).
+ */
+const replaceGaugeImage = asyncHandler(async (req, res) => {
+  const gauge = await Gauge.findById(req.params.id);
+  if (!gauge || !ensureCompanyAccess(req, res, gauge)) return;
+  if (!req.file) {
+    return errorResponse(res, 400, 'Image file is required');
+  }
+
+  const oldImage = gauge.image;
+  if (oldImage && typeof oldImage === 'string' && oldImage.trim()) {
+    const oldPath = path.isAbsolute(oldImage)
+      ? oldImage
+      : path.join(process.cwd(), oldImage);
+    try {
+      if (fs.existsSync(oldPath)) {
+        fs.unlinkSync(oldPath);
+      }
+    } catch (err) {
+      // Log but don't fail the request; new image is already uploaded
+      console.warn('Could not remove old gauge image:', oldPath, err.message);
+    }
+  }
+
+  gauge.image = req.file.path;
+  await gauge.save();
+  auditLogFromRequest(req, {
+    actionType: 'UPLOAD',
+    entityType: 'GAUGE',
+    entityId: gauge._id.toString(),
+    entityName: `${gauge.gaugeName} #${gauge.gaugeId}`,
+    title: 'Gauge Image Replaced',
+    description: `Image replaced for ${gauge.gaugeName} #${gauge.gaugeId} by ${req.user?.name || 'User'}.`,
+  });
+  return successResponse(res, 200, 'Gauge image replaced successfully', { gauge });
+});
+
 const deleteGauge = asyncHandler(async (req, res) => {
   const gauge = await Gauge.findById(req.params.id);
   if (!gauge || !ensureCompanyAccess(req, res, gauge)) return;
@@ -176,5 +218,6 @@ export default {
   searchGauges,
   getGaugeById,
   updateGauge,
+  replaceGaugeImage,
   deleteGauge,
 };

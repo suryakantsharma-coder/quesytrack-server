@@ -1,5 +1,5 @@
-import mongoose from 'mongoose';
-import bcrypt from 'bcrypt';
+import mongoose from "mongoose";
+import bcrypt from "bcrypt";
 
 /**
  * User Schema
@@ -10,53 +10,66 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Name is required'],
+      required: [true, "Name is required"],
       trim: true,
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
+      required: [true, "Email is required"],
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
+      match: [/^\S+@\S+\.\S+$/, "Please provide a valid email"],
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
-      minlength: [6, 'Password must be at least 6 characters'],
+      required: [true, "Password is required"],
+      minlength: [6, "Password must be at least 6 characters"],
       select: false, // Don't return password by default
     },
     designation: {
       type: String,
       trim: true,
-      default: '',
+      default: "",
+    },
+    phoneNumber: {
+      type: String,
+      trim: true,
+      default: "",
     },
     role: {
       type: String,
-      enum: ['Admin', 'Viewer', 'Editor'],
-      default: 'Viewer',
+      enum: ["admin", "viewer", "editor", "super admin"],
+      default: "viewer",
     },
     company: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Company',
+      ref: "Company",
       required: false,
       index: true,
+    },
+    imageUrl: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    image: {
+      type: String,
+      default: "",
     },
   },
   {
     timestamps: true, // Creates createdAt and updatedAt automatically
-  }
+  },
 );
 
 userSchema.index({ name: 1 });
 userSchema.index({ role: 1 });
 
-
 // Hash password before saving
-userSchema.pre('save', async function (next) {
+userSchema.pre("save", async function (next) {
   // Only hash if password is modified
-  if (!this.isModified('password')) return next();
+  if (!this.isModified("password")) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -79,4 +92,4 @@ userSchema.methods.toJSON = function () {
   return userObject;
 };
 
-export default mongoose.model('User', userSchema);
+export default mongoose.model("User", userSchema);

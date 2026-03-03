@@ -32,10 +32,11 @@ Used across many GET list and search endpoints:
 | POST | `/api/auth/login` | No | Login, get JWT (includes `company` in payload if set) |
 | POST | `/api/auth/check-token` | No | Validate token |
 | GET | `/api/auth/me` | Bearer | Current user profile |
+| PATCH | `/api/auth/me` | Bearer | Update own profile (name, email, phoneNumber, designation) |
 
 ### POST /api/auth/register
 
-**Body (JSON):**
+**Body:** JSON (`Content-Type: application/json`) or multipart form-data (`Content-Type: multipart/form-data`). For multipart, send an optional file in field `image` (user profile image).
 
 | Field         | Type   | Required | Description |
 |---------------|--------|----------|-------------|
@@ -43,7 +44,9 @@ Used across many GET list and search endpoints:
 | email         | string | Yes      | Unique email |
 | password      | string | Yes      | Password    |
 | designation   | string | No       | Default `""` |
+| phoneNumber   | string | No       | Phone       |
 | role          | string | No       | Default `Viewer` |
+| image         | file   | No       | Profile image (multipart only); stored and returned as `imageUrl` |
 
 ### POST /api/auth/login
 
@@ -65,11 +68,56 @@ Used across many GET list and search endpoints:
 ### GET /api/auth/me
 
 **Headers:** `Authorization: Bearer <token>`  
-**Response:** Current user (id, name, email, designation, role, createdAt, updatedAt).
+**Response:** Current user (id, name, email, designation, phoneNumber, imageUrl, role, createdAt, updatedAt).
+
+### PATCH /api/auth/me
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Body:** JSON or multipart form-data. All fields optional; only provided fields are updated. For multipart, optional file in field `image` updates profile image.
+
+| Field        | Type   | Description |
+|--------------|--------|-------------|
+| name         | string | Full name   |
+| email        | string | Unique, valid email |
+| phoneNumber  | string | Phone       |
+| designation  | string | Job title   |
+| imageUrl     | string | Profile image URL (or set via `image` file in multipart) |
+| image        | file   | Profile image (multipart only) |
+
+**Response:** Updated user (no password); includes `imageUrl`.
 
 ---
 
-## 2. Companies – `/api/companies`
+## 2. Users – `/api/users`
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| PUT | `/api/users/update` | Bearer | Update own profile (name, email, phone, image) |
+
+### PUT /api/users/update
+
+**Headers:** `Authorization: Bearer <token>`
+
+**Body:** `multipart/form-data`. All fields optional; only provided fields are updated.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| name | string | Full name |
+| email | string | Unique, valid email |
+| phone | string | Phone number |
+| image | file | Profile image (jpg, jpeg, png, webp; max 5MB) |
+
+- If **image** is uploaded: file is stored under `uploads/users/` with name `userId_timestamp.ext`; `user.image` is set to `/uploads/users/filename`.
+- If no image is sent: existing `user.image` is kept.
+
+**Response:** `{ success: true, message, data: { user } }` — updated user (no password). Use `user.image` for profile image URL.
+
+**Errors:** 400 invalid file type/size or duplicate email; 401 unauthorized.
+
+---
+
+## 3. Companies – `/api/companies`
 
 All require **Bearer**. List/Get/Update/Delete require user to be assigned to a company; create is allowed for any authenticated user.
 
@@ -78,6 +126,9 @@ All require **Bearer**. List/Get/Update/Delete require user to be assigned to a 
 | POST | `/api/companies` | Create company |
 | GET | `/api/companies` | List user’s company (single) |
 | GET | `/api/companies/:id` | Get company by ID |
+| GET | `/api/companies/:id/users` | List all users of the company (paginated) |
+| PATCH | `/api/companies/:id/users/:userId/role` | Update a user's role (company Admin only) |
+| DELETE | `/api/companies/:id/users/:userId` | Remove user from company / unassign (company Admin only) |
 | PUT | `/api/companies/:id` | Update company |
 | DELETE | `/api/companies/:id` | Delete company |
 
@@ -103,6 +154,32 @@ All require **Bearer**. List/Get/Update/Delete require user to be assigned to a 
 
 **Path:** `id` = company MongoDB `_id`. User must belong to this company.
 
+### GET /api/companies/:id/users
+
+**Path:** `id` = company MongoDB `_id`. Returns all users assigned to this company. Caller must belong to the same company.
+
+**Query:** `page`, `limit`, `sortBy`, `sortOrder`, `search` (searches name, email, designation, role), `dateFrom`, `dateTo`.
+
+**Response:** `{ users, pagination }` — user objects without password.
+
+### PATCH /api/companies/:id/users/:userId/role
+
+**Path:** `id` = company ID, `userId` = user MongoDB `_id`. Caller must be company Admin; target user must belong to this company.
+
+**Body (JSON):**
+
+| Field | Type   | Required | Description |
+|-------|--------|----------|-------------|
+| role  | string | Yes      | One of: `admin`, `viewer`, `editor`, `super admin` |
+
+**Response:** Updated user (no password).
+
+### DELETE /api/companies/:id/users/:userId
+
+**Path:** `id` = company ID, `userId` = user MongoDB `_id`. Removes the user from the company (sets `company` to null). Caller must be company Admin; target user must belong to this company.
+
+**Response:** `{ user }` — updated user (no password).
+
 ### PUT /api/companies/:id
 
 **Body (JSON):** All optional; only provided fields are updated.
@@ -123,7 +200,7 @@ All require **Bearer**. List/Get/Update/Delete require user to be assigned to a 
 
 ---
 
-## 3. Projects – `/api/projects`
+## 4. Projects – `/api/projects`
 
 All require **Bearer** and user must have a company.
 
@@ -185,7 +262,7 @@ All require **Bearer** and user must have a company.
 
 ---
 
-## 4. Gauges – `/api/gauges`
+## 5. Gauges – `/api/gauges`
 
 All require **Bearer** and user must have a company. Create/Update can include optional image upload.
 
@@ -196,6 +273,7 @@ All require **Bearer** and user must have a company. Create/Update can include o
 | GET | `/api/gauges/search` | Search gauges |
 | GET | `/api/gauges/:id` | Get gauge by ID |
 | PUT | `/api/gauges/:id` | Update gauge (optional `image` file) |
+| PUT | `/api/gauges/:id/image` | Replace gauge image (removes old file, uploads new one) |
 | DELETE | `/api/gauges/:id` | Delete gauge |
 
 ### POST /api/gauges
@@ -245,13 +323,19 @@ All require **Bearer** and user must have a company. Create/Update can include o
 **Content-Type:** `multipart/form-data` (if image) or `application/json`.  
 **Body:** Same fields as create; all optional. Use form field `image` to replace image. Do not send `company` or `gaugeId`.
 
+### PUT /api/gauges/:id/image
+
+**Body:** `multipart/form-data` with required field **`image`** (file).
+
+Removes the gauge’s existing image file from disk (if any) and replaces it with the uploaded image. Updates `gauge.image` to the new path. Returns the updated gauge.
+
 ### DELETE /api/gauges/:id
 
 **Path:** `id` = gauge MongoDB `_id`. Resource must belong to user’s company.
 
 ---
 
-## 5. Calibrations – `/api/calibrations`
+## 6. Calibrations – `/api/calibrations`
 
 All require **Bearer** and user must have a company. Create/Update support multiple file uploads and attachment replacement.
 
@@ -325,7 +409,7 @@ Do not send `company`. `projectId` can be ObjectId or custom projectId.
 
 ---
 
-## 6. Reports – `/api/reports`
+## 7. Reports – `/api/reports`
 
 All require **Bearer** and user must have a company.
 
@@ -384,7 +468,7 @@ All require **Bearer** and user must have a company.
 
 ---
 
-## 7. Logs – `/api/logs`
+## 8. Logs – `/api/logs`
 
 All require **Bearer** and user must have a company. Read-only.
 
@@ -421,7 +505,7 @@ All require **Bearer** and user must have a company. Read-only.
 
 ---
 
-## 8. Admin – `/api/admin`
+## 9. Admin – `/api/admin`
 
 All require **Bearer** and **Admin** role.
 
@@ -448,19 +532,23 @@ All require **Bearer** and **Admin** role.
 
 **Query:** Same as `/api/admin/users`; uses search filter on name, email, designation, role.
 
-### PATCH /api/admin/users/:id (assign user to company)
+### PATCH /api/admin/users/:id (update user: company and/or profile)
 
 **Path:** `id` = user MongoDB `_id` to update.
 
-**Body (JSON):**
+**Body (JSON):** All optional; only provided fields are updated.
 
-| Field   | Type   | Required | Description |
-|---------|--------|----------|-------------|
-| company | string \| null | Yes | Company MongoDB `_id` to assign, or `null` to unassign |
+| Field        | Type   | Description |
+|--------------|--------|-------------|
+| company      | string \| null | Company MongoDB `_id` to assign, or `null` to unassign |
+| name         | string | Full name   |
+| email        | string | Unique, valid email |
+| phoneNumber  | string | Phone       |
+| designation  | string | Job title   |
 
-**Response:** Updated user (no password). User must log in again for token to include new `company`.
+**Response:** Updated user (no password). If `company` was changed, user must log in again for token to include new company.
 
-**Errors:** 400 invalid user/company ID, 404 user or company not found.
+**Errors:** 400 invalid user/company ID or duplicate email, 404 user or company not found.
 
 ### GET /api/admin/sequence-info
 
@@ -489,7 +577,7 @@ All require **Bearer** and **Admin** role.
 
 ---
 
-## 9. AI Chat – `/api/ai-chat`
+## 10. AI Chat – `/api/ai-chat`
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -507,7 +595,7 @@ All require **Bearer** and **Admin** role.
 
 ---
 
-## 10. Health
+## 11. Health
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
