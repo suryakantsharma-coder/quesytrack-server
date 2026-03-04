@@ -1,5 +1,13 @@
-import mongoose from 'mongoose';
-import { errorResponse } from './apiResponse.js';
+import mongoose from "mongoose";
+import { errorResponse } from "./apiResponse.js";
+
+/**
+ * True if the current user has role "super admin" (case-insensitive).
+ */
+export function isSuperAdmin(req) {
+  const role = String((req.user?.role ?? "")).toLowerCase();
+  return role === "super admin";
+}
 
 /**
  * Ensure the authenticated user has a company assigned. Use before GET/list operations.
@@ -7,7 +15,7 @@ import { errorResponse } from './apiResponse.js';
  */
 export function requireCompany(req, res) {
   if (!req.user || !req.user.company) {
-    errorResponse(res, 403, 'User must be assigned to a company');
+    errorResponse(res, 403, "User must be assigned to a company");
     return false;
   }
   return true;
@@ -30,7 +38,10 @@ export function addCompanyFilter(filter, req) {
  */
 export function isValidObjectId(id) {
   if (!id) return false;
-  return mongoose.Types.ObjectId.isValid(id) && String(new mongoose.Types.ObjectId(id)) === String(id);
+  return (
+    mongoose.Types.ObjectId.isValid(id) &&
+    String(new mongoose.Types.ObjectId(id)) === String(id)
+  );
 }
 
 /**
@@ -43,12 +54,12 @@ export function ensureCompanyAccess(req, res, doc) {
   const docCompany = doc.company ? doc.company.toString() : null;
   const userCompany = req.user?.company ? req.user.company.toString() : null;
   if (userCompany && docCompany !== userCompany) {
-    errorResponse(res, 404, 'Resource not found');
+    errorResponse(res, 404, "Resource not found");
     return false;
   }
   if (userCompany) return true;
   if (!docCompany) return true;
-  errorResponse(res, 403, 'User must be assigned to a company');
+  errorResponse(res, 403, "User must be assigned to a company");
   return false;
 }
 

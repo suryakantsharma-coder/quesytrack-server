@@ -12,6 +12,7 @@ import gaugeRoutes from './routes/gauge.routes.js';
 import calibrationRoutes from './routes/calibration.routes.js';
 import reportRoutes from './routes/report.routes.js';
 import adminRoutes from './routes/admin.routes.js';
+import dashboardRoutes from './routes/dashboard.routes.js';
 import aiChatRoutes from './routes/aiChat.routes.js';
 import logsRoutes from './routes/logs.routes.js';
 import companyRoutes from './routes/company.routes.js';
@@ -24,14 +25,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const apiLimiter = rateLimit({
-  windowMs: env.RATE_LIMIT_WINDOW_MS,
-  max: env.RATE_LIMIT_MAX,
-  message: { success: false, error: 'Too many requests, please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-app.use('/api', apiLimiter);
+// Rate limit: disabled in development (RATE_LIMIT_MAX=0), or use env values. Set RATE_LIMIT_MAX in .env to override.
+if (env.RATE_LIMIT_MAX > 0) {
+  const apiLimiter = rateLimit({
+    windowMs: env.RATE_LIMIT_WINDOW_MS,
+    max: env.RATE_LIMIT_MAX,
+    message: { success: false, error: 'Too many requests, please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use('/api', apiLimiter);
+}
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
@@ -45,6 +49,7 @@ app.use('/api/gauges', gaugeRoutes);
 app.use('/api/calibrations', calibrationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/logs', logsRoutes);
 app.use('/api/companies', companyRoutes);
 app.use('/api/users', userRoutes);

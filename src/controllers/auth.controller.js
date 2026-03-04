@@ -4,6 +4,16 @@ import { successResponse, errorResponse } from '../utils/apiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { auditLogFromRequest } from '../services/logger.service.js';
 
+const VALID_ROLES = ['admin', 'viewer', 'editor', 'super admin'];
+
+function normalizeRole(role) {
+  if (!role || typeof role !== 'string') return 'viewer';
+  const r = role.trim().toLowerCase();
+  if (VALID_ROLES.includes(r)) return r;
+  if (r === 'super admin' || r === 'superadmin') return 'super admin';
+  return 'viewer';
+}
+
 const register = asyncHandler(async (req, res) => {
   const { name, email, password, designation, phoneNumber, role } = req.body;
   if (!name || !email || !password) {
@@ -20,7 +30,7 @@ const register = asyncHandler(async (req, res) => {
     password,
     designation: designation || '',
     phoneNumber: phoneNumber || '',
-    role: role || 'Viewer',
+    role: normalizeRole(role),
     imageUrl,
   });
   const token = generateToken({

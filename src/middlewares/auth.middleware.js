@@ -32,6 +32,16 @@ const adminOnly = (req, res, next) => {
   next();
 };
 
+/** Allow both admin and super admin roles (for PATCH /users/:id etc.). */
+const adminOrSuperAdmin = (req, res, next) => {
+  if (!req.user) return errorResponse(res, 401, 'Authentication required');
+  const role = String((req.user.role || '')).toLowerCase();
+  if (role !== 'admin' && role !== 'super admin') {
+    return errorResponse(res, 403, 'Admin or Super Admin access required');
+  }
+  next();
+};
+
 const protect = authenticate;
 
-export { authenticate, protect, adminOnly };
+export { authenticate, protect, adminOnly, adminOrSuperAdmin };
