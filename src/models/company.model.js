@@ -64,6 +64,11 @@ const companySchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email'],
     },
+    image: {
+      type: String,
+      trim: true,
+      default: '',
+    },
   },
   {
     timestamps: true,

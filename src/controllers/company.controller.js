@@ -122,6 +122,9 @@ const updateCompany = asyncHandler(async (req, res) => {
   if (website !== undefined) updates.website = website.trim();
   if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber.trim();
   if (email !== undefined) updates.email = email.trim().toLowerCase();
+  if (req.file && req.file.filename) {
+    updates.image = `/uploads/company-logo/${req.file.filename}`;
+  }
   Object.assign(company, updates);
   await company.save();
   return successResponse(res, 200, "Company updated successfully", { company });

@@ -188,7 +188,10 @@ curl -s -X GET "http://localhost:4000/api/companies/$COMPANY_ID" \
 
 **PUT /api/companies/:id**
 
-User must belong to the company. All body fields are optional; only provided fields are updated.
+User must belong to the company. All body fields are optional; only provided fields are updated.  
+You can also **optionally upload a company logo image**; the server will save it under `uploads/company-logo/` and store the URL in the `image` field.
+
+### JSON-only update (no logo)
 
 ```bash
 curl -s -X PUT "http://localhost:4000/api/companies/$COMPANY_ID" \
@@ -209,6 +212,22 @@ curl -s -X PUT "http://localhost:4000/api/companies/$COMPANY_ID" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"phoneNumber": "+91-9876543211"}'
+```
+
+### Update with logo upload (multipart)
+
+Field name for the logo file is `image`. Other fields are sent as normal form fields.
+
+```bash
+curl -s -X PUT "http://localhost:4000/api/companies/$COMPANY_ID" \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: multipart/form-data" \
+  -F "image=@/path/to/logo.png" \
+  -F "name=Acme Labs Pvt Ltd" \
+  -F "address=123 Industrial Ave, New City 400002" \
+  -F "website=https://acmelabs.example.com" \
+  -F "phoneNumber=+91-9876543211" \
+  -F "email=contact@acmelabs.example.com"
 ```
 
 **Expected response (200):**

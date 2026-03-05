@@ -425,23 +425,42 @@ const getCalibrationsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/calibrations/upcoming
- * Super admin only. Returns calibrations due from today within the given range.
- * Query: companyId (optional, "all" or MongoDB id), range or filter = yesterday, 7_days, 30_days, 6_month, 1_year (default 30_days), limit (optional, default 500).
+ * All roles. Returns calibrations due from today within the given range.
+ * Super admin: companyId optional ("all" or MongoDB id). All other roles: companyId required and must be user's company.
+ * Query: companyId (required for non–super admin), range or filter = yesterday, 7_days, 30_days, 6_month, 1_year (default 30_days), limit (optional, default 500).
  */
 const getUpcomingCalibrationsForSuperAdmin = asyncHandler(async (req, res) => {
-  if (!ensureSuperAdminOr403(req, res)) return;
+  const isSuperAdminUser = isSuperAdmin(req);
   const companyId = req.query.companyId;
+
   let companyFilter = {};
-  if (companyId !== undefined && companyId !== '') {
-    if (String(companyId).toLowerCase() === 'all') {
-      companyFilter = {};
-    } else if (!mongoose.Types.ObjectId.isValid(companyId)) {
+  if (isSuperAdminUser) {
+    if (companyId !== undefined && companyId !== '') {
+      if (String(companyId).toLowerCase() === 'all') {
+        companyFilter = {};
+      } else if (!mongoose.Types.ObjectId.isValid(companyId)) {
+        errorResponse(res, 400, 'Invalid company ID');
+        return;
+      } else {
+        companyFilter = { company: new mongoose.Types.ObjectId(companyId) };
+      }
+    }
+  } else {
+    if (!companyId || String(companyId).trim() === '') {
+      errorResponse(res, 400, 'Company ID is required');
+      return;
+    }
+    if (!mongoose.Types.ObjectId.isValid(companyId)) {
       errorResponse(res, 400, 'Invalid company ID');
       return;
-    } else {
-      companyFilter = { company: new mongoose.Types.ObjectId(companyId) };
     }
+    if (String(req.user.company) !== String(companyId)) {
+      errorResponse(res, 403, 'Access denied to this company');
+      return;
+    }
+    companyFilter = { company: new mongoose.Types.ObjectId(companyId) };
   }
+
   const upcomingDueFilter = upcomingDueDateFilterFromQuery(req, res);
   const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
   const upcomingRaw = await Calibration.find({

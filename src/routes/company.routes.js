@@ -1,6 +1,7 @@
 import express from 'express';
 import { authenticate } from '../middlewares/auth.middleware.js';
 import companyController from '../controllers/company.controller.js';
+import { uploadCompanyLogoOptional } from '../middlewares/uploadCompanyLogo.js';
 
 const router = express.Router();
 router.use(authenticate);
@@ -11,7 +12,7 @@ router.get('/:id/users', companyController.getCompanyUsers);
 router.patch('/:id/users/:userId/role', companyController.updateUserRoleInCompany);
 router.delete('/:id/users/:userId', companyController.removeUserFromCompany);
 router.get('/:id', companyController.getCompanyById);
-router.put('/:id', companyController.updateCompany);
+router.put('/:id', uploadCompanyLogoOptional, companyController.updateCompany);
 router.delete('/:id', companyController.deleteCompany);
 
 export default router;
