@@ -77,21 +77,24 @@ const searchUsers = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Search successful', { data: users, pagination });
 });
 
+/** Admin list endpoints use page & limit (max 2000 per page). */
+const ADMIN_MAX_LIMIT = 2000;
+
 /**
  * GET /api/admin/users/unassigned
- * Super admin only. Returns array of users not assigned to any company (company null or missing).
+ * Super admin only. Returns users not assigned to any company. Supports pagination: page, limit, sortBy, sortOrder.
  */
 const getUnassignedUsersForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const users = await User.find({
-    $or: [{ company: null }, { company: { $exists: false } }],
-  })
-    .select('-password')
-    .limit(limit)
-    .lean()
-    .sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Unassigned users retrieved successfully', { users });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const filter = { $or: [{ company: null }, { company: { $exists: false } }] };
+  const { data, pagination } = await paginateQuery(User, filter, paginationParams, [], { lean: true });
+  const users = (data || []).map((u) => {
+    const o = { ...u };
+    delete o.password;
+    return o;
+  });
+  return successResponse(res, 200, 'Unassigned users retrieved successfully', { users, pagination });
 });
 
 const updateUserCompany = asyncHandler(async (req, res) => {
@@ -283,6 +286,10 @@ function upcomingDueDateFilterFromQuery(req, res) {
   return { calibrationDueDate: { $gte: startOfToday, $lte: endDate } };
 }
 
+/**
+ * GET /api/admin/projects/:companyId
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder.
+ */
 const getProjectsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
   const companyFilter = companyFilterOrAll(req.params.companyId, res);
@@ -290,9 +297,9 @@ const getProjectsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
   const filter = { ...companyFilter, ...dateFilter };
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const projects = await Project.find(filter).limit(limit).lean().sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Projects retrieved successfully', { projects });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const { data, pagination } = await paginateQuery(Project, filter, paginationParams, [], { lean: true });
+  return successResponse(res, 200, 'Projects retrieved successfully', { projects: data || [], pagination });
 });
 
 /**
@@ -333,6 +340,10 @@ const getProjectStatsForSuperAdmin = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * GET /api/admin/gauges/:companyId
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder.
+ */
 const getGaugesByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
   const companyFilter = companyFilterOrAll(req.params.companyId, res);
@@ -340,9 +351,9 @@ const getGaugesByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
   const filter = { ...companyFilter, ...dateFilter };
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const gauges = await Gauge.find(filter).limit(limit).lean().sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Gauges retrieved successfully', { gauges });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const { data, pagination } = await paginateQuery(Gauge, filter, paginationParams, [], { lean: true });
+  return successResponse(res, 200, 'Gauges retrieved successfully', { gauges: data || [], pagination });
 });
 
 /**
@@ -385,8 +396,7 @@ const getGaugeStatsForSuperAdmin = asyncHandler(async (req, res) => {
 
 /**
  * GET /api/admin/calibrations/:companyId
- * Super admin only. Returns calibrations (filtered by createdAt/updatedAt range) and upcomingCalibrations (due in range window).
- * Query: range or filter = yesterday, 7_days, 30_days, 6_month, 1_year, all_time; limit (optional).
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder. Also returns upcomingCalibrations (first `limit` items).
  */
 const getCalibrationsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
@@ -395,16 +405,18 @@ const getCalibrationsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
   const filter = { ...companyFilter, ...dateFilter };
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
   const upcomingDueFilter = upcomingDueDateFilterFromQuery(req, res);
-  const [calibrationsRaw, upcomingRaw] = await Promise.all([
-    Calibration.find(filter)
-      .limit(limit)
-      .populate('projectId', 'projectName')
-      .lean()
-      .sort({ createdAt: -1 }),
+  const [{ data: calibrationsRaw, pagination }, upcomingRaw] = await Promise.all([
+    paginateQuery(
+      Calibration,
+      filter,
+      paginationParams,
+      [{ path: 'projectId', select: 'projectName' }],
+      { lean: true },
+    ),
     Calibration.find({ ...companyFilter, ...upcomingDueFilter })
-      .limit(limit)
+      .limit(paginationParams.limit)
       .populate('projectId', 'projectName')
       .lean()
       .sort({ calibrationDueDate: 1 }),
@@ -420,6 +432,7 @@ const getCalibrationsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Calibrations retrieved successfully', {
     calibrations,
     upcomingCalibrations,
+    pagination,
   });
 });
 
@@ -462,21 +475,23 @@ const getUpcomingCalibrationsForSuperAdmin = asyncHandler(async (req, res) => {
   }
 
   const upcomingDueFilter = upcomingDueDateFilterFromQuery(req, res);
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const upcomingRaw = await Calibration.find({
-    ...companyFilter,
-    ...upcomingDueFilter,
-  })
-    .limit(limit)
-    .populate('projectId', 'projectName')
-    .lean()
-    .sort({ calibrationDueDate: 1 });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  if (req.query.sortBy === undefined) paginationParams.sortBy = 'calibrationDueDate';
+  if (req.query.sortOrder === undefined) paginationParams.sortOrder = 1;
+  const { data: upcomingRaw, pagination } = await paginateQuery(
+    Calibration,
+    { ...companyFilter, ...upcomingDueFilter },
+    paginationParams,
+    [{ path: 'projectId', select: 'projectName' }],
+    { lean: true },
+  );
   const upcomingCalibrations = (upcomingRaw || []).map((c) => ({
     ...c,
     projectName: c.projectId?.projectName ?? '',
   }));
   return successResponse(res, 200, 'Upcoming calibrations retrieved successfully', {
     upcomingCalibrations,
+    pagination,
   });
 });
 
@@ -518,6 +533,10 @@ const getCalibrationStatsForSuperAdmin = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * GET /api/admin/reports/:companyId
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder.
+ */
 const getReportsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
   const companyFilter = companyFilterOrAll(req.params.companyId, res);
@@ -525,11 +544,15 @@ const getReportsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
   const filter = { ...companyFilter, ...dateFilter };
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const reports = await Report.find(filter).limit(limit).lean().sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Reports retrieved successfully', { reports });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const { data, pagination } = await paginateQuery(Report, filter, paginationParams, [], { lean: true });
+  return successResponse(res, 200, 'Reports retrieved successfully', { reports: data || [], pagination });
 });
 
+/**
+ * GET /api/admin/logs/:companyId
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder.
+ */
 const getLogsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
   const companyFilter = companyFilterOrAll(req.params.companyId, res);
@@ -537,48 +560,63 @@ const getLogsByCompanyForSuperAdmin = asyncHandler(async (req, res) => {
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
   const filter = { ...companyFilter, ...dateFilter };
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const logs = await Log.find(filter).limit(limit).lean().sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Logs retrieved successfully', { logs });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const { data, pagination } = await paginateQuery(Log, filter, paginationParams, [], { lean: true });
+  return successResponse(res, 200, 'Logs retrieved successfully', { logs: data || [], pagination });
 });
 
+/**
+ * GET /api/admin/companies/all
+ * Super admin only. Pagination: page, limit, sortBy, sortOrder.
+ */
 const getAllCompaniesForSuperAdmin = asyncHandler(async (req, res) => {
   if (!ensureSuperAdminOr403(req, res)) return;
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
-  const companies = await Company.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 });
-  return successResponse(res, 200, 'Companies retrieved successfully', { companies });
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
+  const { data, pagination } = await paginateQuery(Company, dateFilter, paginationParams, [], { lean: true });
+  return successResponse(res, 200, 'Companies retrieved successfully', { companies: data || [], pagination });
 });
 
 /**
  * GET /api/admin/all-data
- * Returns projects, gauges, calibrations, reports, and logs from all companies.
- * Only super admin can call this; others get 403 "You are not admin".
- * Query: limit (default 500 per collection, max 2000).
+ * Returns projects, gauges, calibrations, reports, and logs from all companies. Pagination per collection: page, limit, sortBy, sortOrder.
  */
 const getAllDataForSuperAdmin = asyncHandler(async (req, res) => {
   if (!isSuperAdmin(req)) {
     return errorResponse(res, 403, 'You are not admin');
   }
-  const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit, 10) || 500));
   const dateFilter = dateRangeFilterFromQuery(req, res);
   if (dateFilter === null) return;
+  const paginationParams = parsePaginationParams(req.query, ADMIN_MAX_LIMIT);
 
-  const [projects, gauges, calibrations, reports, logs] = await Promise.all([
-    Project.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 }),
-    Gauge.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 }),
-    Calibration.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 }),
-    Report.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 }),
-    Log.find(dateFilter).limit(limit).lean().sort({ createdAt: -1 }),
+  const [
+    { data: projects, pagination: projectsPagination },
+    { data: gauges, pagination: gaugesPagination },
+    { data: calibrations, pagination: calibrationsPagination },
+    { data: reports, pagination: reportsPagination },
+    { data: logs, pagination: logsPagination },
+  ] = await Promise.all([
+    paginateQuery(Project, dateFilter, paginationParams, [], { lean: true }),
+    paginateQuery(Gauge, dateFilter, paginationParams, [], { lean: true }),
+    paginateQuery(Calibration, dateFilter, paginationParams, [], { lean: true }),
+    paginateQuery(Report, dateFilter, paginationParams, [], { lean: true }),
+    paginateQuery(Log, dateFilter, paginationParams, [], { lean: true }),
   ]);
 
   return successResponse(res, 200, 'All data retrieved successfully', {
-    projects,
-    gauges,
-    calibrations,
-    reports,
-    logs,
+    projects: projects || [],
+    gauges: gauges || [],
+    calibrations: calibrations || [],
+    reports: reports || [],
+    logs: logs || [],
+    pagination: {
+      projects: projectsPagination,
+      gauges: gaugesPagination,
+      calibrations: calibrationsPagination,
+      reports: reportsPagination,
+      logs: logsPagination,
+    },
   });
 });
 

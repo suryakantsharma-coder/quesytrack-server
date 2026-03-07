@@ -1,6 +1,10 @@
-const parsePaginationParams = (query) => {
+/**
+ * @param {Object} query - req.query
+ * @param {number} [maxLimit=100] - max allowed limit (e.g. 2000 for admin)
+ */
+const parsePaginationParams = (query, maxLimit = 100) => {
   const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit, 10) || 10));
+  const limit = Math.min(maxLimit, Math.max(1, parseInt(query.limit, 10) || 10));
   const skip = (page - 1) * limit;
   const sortBy = query.sortBy || 'createdAt';
   const sortOrder = query.sortOrder === 'asc' ? 1 : -1;
@@ -20,12 +24,16 @@ const buildPaginationMeta = (total, page, limit) => {
   };
 };
 
-const paginateQuery = async (Model, filter, paginationParams, populateOptions = []) => {
+/**
+ * @param {Object} [options] - { lean: boolean } to return plain objects
+ */
+const paginateQuery = async (Model, filter, paginationParams, populateOptions = [], options = {}) => {
   const { page, limit, skip, sortBy, sortOrder } = paginationParams;
   let query = Model.find(filter)
     .sort({ [sortBy]: sortOrder })
     .skip(skip)
     .limit(limit);
+  if (options.lean) query = query.lean();
   populateOptions.forEach((populateConfig) => {
     query = query.populate(populateConfig);
   });
